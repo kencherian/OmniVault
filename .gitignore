@@ -1,0 +1,14 @@
+# Initialize README
+echo "# OmniVault" > README.md
+echo "A modern, secure cloud storage management platform." >> README.md
+
+# Initialize minimal .gitignore
+cat <<EOT > .gitignore
+node_modules/
+.next/
+.env*
+!.env.example
+build/
+dist/
+.DS_Store
+EOT
