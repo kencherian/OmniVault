@@ -1033,7 +1033,3 @@ declare interface ShareInputProps {
 ```
 
 </details>
-
-<a href="https://jsm.dev/gdrive-kit">
-  <img src="public/readme/videokit.png" alt="Video Kit Banner">
-</a>
