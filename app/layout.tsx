@@ -10,8 +10,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "StoreIt",
-  description: "StoreIt - The only storage solution you need.",
+  title: "OmniVault",
+  description: "A modern, highly resilient cloud storage management platform.",
 };
 
 export default function RootLayout({
