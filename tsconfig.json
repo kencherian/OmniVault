@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types":["jest"],
+    "types": ["jest"],
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,

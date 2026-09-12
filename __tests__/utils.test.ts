@@ -5,7 +5,7 @@ import {
   getFileIcon,
   getFileTypesParams,
 } from "../lib/utils";
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from "@jest/globals";
 
 describe("Utility Functions", () => {
   // Test 1: File Size Conversion
