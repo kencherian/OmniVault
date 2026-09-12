@@ -1,9 +1,12 @@
 import { IStorageProvider } from "./types";
 import { AppwriteStorageProvider } from "./AppwriteProvider";
+import { MinioStorageProvider } from "./MinioProvider";
 
 export function getStorageProvider(): IStorageProvider {
-  // In the future, we can check process.env.STORAGE_PROVIDER here
-  // e.g., if (process.env.STORAGE_PROVIDER === 'minio') return new MinioStorageProvider();
+  // Toggle this via .env to instantly switch your app's entire storage infrastructure
+  if (process.env.STORAGE_PROVIDER === "minio") {
+    return new MinioStorageProvider();
+  }
 
   return new AppwriteStorageProvider();
 }
