@@ -1,12 +1,12 @@
 "use server";
 
 import { createAdminClient, createSessionClient } from "@/lib/appwrite";
-import { InputFile } from "node-appwrite/file";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { ID, Models, Query } from "node-appwrite";
-import { constructFileUrl, getFileType, parseStringify } from "@/lib/utils";
+import { getFileType, parseStringify } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import { getStorageProvider } from "../storage";
 
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
@@ -19,27 +19,31 @@ export const uploadFile = async ({
   accountId,
   path,
 }: UploadFileProps) => {
-  const { storage, databases } = await createAdminClient();
+  const { databases } = await createAdminClient();
+  const storageProvider = getStorageProvider();
 
   try {
-    const inputFile = InputFile.fromBuffer(file, file.name);
+    // Convert the File object to a Buffer for the abstract provider
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const bucketFile = await storage.createFile(
-      appwriteConfig.bucketId,
-      ID.unique(),
-      inputFile
-    );
+    // Use the abstract provider instead of direct Appwrite SDK
+    const bucketFileId = await storageProvider.uploadFile(buffer, {
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size,
+    });
 
     const fileDocument = {
-      type: getFileType(bucketFile.name).type,
-      name: bucketFile.name,
-      url: constructFileUrl(bucketFile.$id),
-      extension: getFileType(bucketFile.name).extension,
-      size: bucketFile.sizeOriginal,
+      type: getFileType(file.name).type,
+      name: file.name,
+      url: storageProvider.getFileUrl(bucketFileId),
+      extension: getFileType(file.name).extension,
+      size: file.size,
       owner: ownerId,
       accountId,
-      users: "", // Changed from [] to "" to match Appwrite String attribute schema
-      bucketFileId: bucketFile.$id,
+      users: "", // Maintained as empty string to match String attribute schema
+      bucketFileId: bucketFileId,
     };
 
     const newFile = await databases
@@ -50,7 +54,8 @@ export const uploadFile = async ({
         fileDocument
       )
       .catch(async (error: unknown) => {
-        await storage.deleteFile(appwriteConfig.bucketId, bucketFile.$id);
+        // Use abstract provider for cleanup if database record fails
+        await storageProvider.deleteFile(bucketFileId);
         handleError(error, "Failed to create file document");
       });
 
@@ -164,7 +169,7 @@ export const updateFileUsers = async ({
     revalidatePath(path);
     return parseStringify(updatedFile);
   } catch (error) {
-    handleError(error, "Failed to rename file");
+    handleError(error, "Failed to update users");
   }
 };
 
@@ -173,7 +178,8 @@ export const deleteFile = async ({
   bucketFileId,
   path,
 }: DeleteFileProps) => {
-  const { databases, storage } = await createAdminClient();
+  const { databases } = await createAdminClient();
+  const storageProvider = getStorageProvider();
 
   try {
     const deletedFile = await databases.deleteDocument(
@@ -183,13 +189,14 @@ export const deleteFile = async ({
     );
 
     if (deletedFile) {
-      await storage.deleteFile(appwriteConfig.bucketId, bucketFileId);
+      // Delegated to abstract adapter
+      await storageProvider.deleteFile(bucketFileId);
     }
 
     revalidatePath(path);
     return parseStringify({ status: "success" });
   } catch (error) {
-    handleError(error, "Failed to rename file");
+    handleError(error, "Failed to delete file");
   }
 };
 
