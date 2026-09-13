@@ -31,11 +31,18 @@ import {
 import { usePathname } from "next/navigation";
 import { FileDetails, ShareInput } from "@/components/ActionsModalContent";
 
-const ActionDropdown = ({ file }: { file: Models.Document }) => {
+// 1. Updated Props Interface
+interface Props {
+  file: Models.Document;
+  onOptimisticRename?: (newName: string) => void;
+}
+
+// 2. Add prop to signature
+const ActionDropdown = ({ file, onOptimisticRename }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [action, setAction] = useState<ActionType | null>(null);
-  const [name, setName] = useState(file.name);
+  const [action, setAction] = useState<any | null>(null);
+  const [name, setName] = useState(file.name.replace(`.${file.extension}`, ""));
   const [isLoading, setIsLoading] = useState(false);
   const [emails, setEmails] = useState<string[]>([]);
 
@@ -45,8 +52,8 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     setIsModalOpen(false);
     setIsDropdownOpen(false);
     setAction(null);
-    setName(file.name);
-    //   setEmails([]);
+    setName(file.name.replace(`.${file.extension}`, ""));
+    setEmails([]);
   };
 
   const handleAction = async () => {
@@ -54,19 +61,50 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     setIsLoading(true);
     let success = false;
 
+    // Cache the original name for rollback
+    const originalName = file.name;
+
     const actions = {
-      rename: () =>
-        renameFile({ fileId: file.$id, name, extension: file.extension, path }),
+      rename: async () => {
+        // Optimistically update the UI instantly
+        if (onOptimisticRename) {
+          onOptimisticRename(`${name}.${file.extension}`);
+        }
+
+        try {
+          return await renameFile({
+            fileId: file.$id,
+            name,
+            extension: file.extension,
+            path,
+          });
+        } catch (error) {
+          // Rollback on failure
+          if (onOptimisticRename) {
+            onOptimisticRename(originalName);
+          }
+          throw error;
+        }
+      },
       share: () => updateFileUsers({ fileId: file.$id, emails, path }),
       delete: () =>
-        deleteFile({ fileId: file.$id, bucketFileId: file.bucketFileId, path }),
+        deleteFile({
+          fileId: file.$id,
+          bucketFileId: file.bucketFileId,
+          path,
+        }),
     };
 
-    success = await actions[action.value as keyof typeof actions]();
-
-    if (success) closeAllModals();
-
-    setIsLoading(false);
+    try {
+      success = await actions[action.value as keyof typeof actions]();
+      if (success) {
+        closeAllModals();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRemoveUser = async (email: string) => {
@@ -204,4 +242,5 @@ const ActionDropdown = ({ file }: { file: Models.Document }) => {
     </Dialog>
   );
 };
+
 export default ActionDropdown;
