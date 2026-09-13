@@ -125,6 +125,38 @@ OmniVault is built for high-throughput concurrency. Load testing was conducted u
 - **Max File Size:** 100MB per file (Configured via Next.js Server Action body size limits).
 - **Resilience:** Implemented client-side `AbortController` and exponential backoff retry logic (1s, 2s, 4s) to ensure 99.9% upload success rates during simulated network drops.
 
+## System Architecture
+
+OmniVault utilizes a decoupled, adapter-based architecture to separate backend-as-a-service (BaaS) dependencies from core business logic, ensuring high scalability and vendor agnosticism.
+
+### Binary Data Flow & Storage Adapter
+
+The application abstracts third-party storage SDKs behind a rigid `IStorageProvider` interface. This allows seamless toggling between Appwrite Storage and local S3-compatible environments (MinIO) via environment variables without altering the UI or Server Actions.
+
+```mermaid
+graph TD
+    Client[Next.js Client UI] -->|Upload Stream| SA[Server Actions]
+    SA -->|File Buffer| Adapter{StorageProvider Adapter}
+    
+    Adapter -->|S3 Protocol| MinIO[(MinIO S3 Docker)]
+    Adapter -->|Appwrite SDK| AppwriteStorage[(Appwrite Bucket)]
+    
+    SA -->|Store Metadata| Database[(Appwrite Database)]
+
+Authentication Token Lifecycle
+Session management leverages HTTP-only cookies to bridge the gap between Next.js React Server Components (RSC) and the Appwrite backend.
+
+sequenceDiagram
+    participant C as Client
+    participant A as Appwrite Auth
+    participant S as Next.js Server (RSC)
+
+    C->>+A: Submit Email & OTP
+    A-->>-C: Return Session Secret
+    C->>+S: Attach to HTTP-Only Cookie
+    S->>S: createSessionClient()
+    S-->>-C: Hydrate Protected Routes
+
 ## <a name="snippets">🕸️ Snippets</a>
 
 <details>
