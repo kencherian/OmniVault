@@ -133,14 +133,14 @@ OmniVault utilizes a decoupled, adapter-based architecture to separate backend-a
 
 The application abstracts third-party storage SDKs behind a rigid `IStorageProvider` interface. This allows seamless toggling between Appwrite Storage and local S3-compatible environments (MinIO) via environment variables without altering the UI or Server Actions.
 
-```mermaid
+````mermaid
 graph TD
     Client[Next.js Client UI] -->|Upload Stream| SA[Server Actions]
     SA -->|File Buffer| Adapter{StorageProvider Adapter}
-    
+
     Adapter -->|S3 Protocol| MinIO[(MinIO S3 Docker)]
     Adapter -->|Appwrite SDK| AppwriteStorage[(Appwrite Bucket)]
-    
+
     SA -->|Store Metadata| Database[(Appwrite Database)]
 
 Authentication Token Lifecycle
@@ -223,7 +223,7 @@ const config: Config = {
   plugins: [require("tailwindcss-animate")],
 };
 export default config;
-```
+````
 
 </details>
 
